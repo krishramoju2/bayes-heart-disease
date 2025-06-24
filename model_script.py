@@ -1,40 +1,59 @@
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from pgmpy.models import BayesianModel
-from pgmpy.estimators import MaximumLikelihoodEstimator, VariableElimination
-import matplotlib.pyplot as plt
-import networkx as nx
+try:
+    import pandas as pd
+    import numpy as np
+    from sklearn.preprocessing import MinMaxScaler
+    from pgmpy.models import BayesianNetwork
+    from pgmpy.estimators import MaximumLikelihoodEstimator
+    from pgmpy.inference import VariableElimination
+    import matplotlib.pyplot as plt
+    import networkx as nx
+except ImportError as e:
+    print("🚨 Required library not found:", e)
+    print("➡️ Try running: pip install pandas numpy scikit-learn pgmpy matplotlib networkx")
+    exit(1)
 
-# Load cleaned dataset
-df = pd.read_csv("cleaned_heart_disease.csv")
+# Load dataset
+try:
+    df = pd.read_csv("cleaned_heart_disease.csv")
+except FileNotFoundError:
+    print("❌ 'cleaned_heart_disease.csv' not found. Please run the cleaning script first.")
+    exit(1)
 
 # Define Bayesian Network structure
-model = BayesianModel([("age", "fbs"),
-                       ("fbs", "target"),
-                       ("target", "chol"),
-                       ("target", "thalach")])
+model = BayesianNetwork([
+    ("age", "fbs"),
+    ("fbs", "target"),
+    ("target", "chol"),
+    ("target", "thalach")
+])
 
-# Fit the model using MLE
-model.fit(df, estimator=MaximumLikelihoodEstimator)
+# Train model
+try:
+    model.fit(df, estimator=MaximumLikelihoodEstimator)
+except Exception as e:
+    print("❌ Error during training:", e)
+    exit(1)
 
 # Inference engine
 infer = VariableElimination(model)
 
-# Query 1: What is P(target | age=0.7)?
-q1 = infer.query(variables=["target"], evidence={"age": 0.7})
-print("P(target | age=0.7):\n", q1)
+# Inference Queries
+try:
+    print("🔍 P(target | age=0.7):")
+    print(infer.query(variables=["target"], evidence={"age": 0.7}))
 
-# Query 2: Cholesterol distribution when target=1 (has disease)
-q2 = infer.query(variables=["chol"], evidence={"target": 1})
-print("Cholesterol distribution | target=1:\n", q2)
+    print("\n🔍 Cholesterol distribution | target=1:")
+    print(infer.query(variables=["chol"], evidence={"target": 1}))
 
-# Query 3: Thalach distribution when fbs=0 and target=0
-q3 = infer.query(variables=["thalach"], evidence={"fbs": 0, "target": 0})
-print("Thalach | fbs=0, target=0:\n", q3)
+    print("\n🔍 Thalach | fbs=0, target=0:")
+    print(infer.query(variables=["thalach"], evidence={"fbs": 0, "target": 0}))
+except Exception as e:
+    print("❌ Error during inference:", e)
 
-# Optional: Visualize the network
+# Visualize network
 plt.figure(figsize=(8, 6))
-nx.draw(model, with_labels=True, node_size=3000, node_color='lightblue', font_size=14, font_weight='bold')
+nx.draw(model, with_labels=True, node_size=3000, node_color='lightblue', font_size=12, font_weight='bold')
 plt.title("Bayesian Network Structure")
 plt.show()
+
+
